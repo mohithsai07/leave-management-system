@@ -8,30 +8,18 @@ CREATE OR ALTER PROCEDURE sp_upsert_leave_balance
 )
 AS
 BEGIN
-
-    /* =====================================================
-       PREVENT EXTRA RESULT MESSAGES
-    ===================================================== */
     
     SET NOCOUNT ON;
 
 
-    /* =====================================================
-       START ERROR HANDLING
-    ===================================================== */
-
     BEGIN TRY
 
-        /* =================================================
-           START TRANSACTION
-        ================================================= */
+
 
         BEGIN TRANSACTION;
 
 
-        /* =================================================
-           VALIDATION SECTION
-        ================================================= */
+       
 
         -- Check if allocated leave is negative
         IF @total_allocated < 0
@@ -69,9 +57,9 @@ BEGIN
         END
 
 
-        /* =================================================
+        /* 
            UPSERT LOGIC SECTION
-        ================================================= */
+         */
 
         -- Check if leave balance record already exists
         IF EXISTS
@@ -85,9 +73,9 @@ BEGIN
 
         BEGIN
 
-            /* =============================================
+            /* 
                UPDATE EXISTING RECORD
-            ============================================= */
+             */
 
             UPDATE leave_balances
             SET
@@ -106,9 +94,9 @@ BEGIN
 
         BEGIN
 
-            /* =============================================
+            /* 
                INSERT NEW RECORD
-            ============================================= */
+             */
 
             INSERT INTO leave_balances
             (
@@ -133,32 +121,21 @@ BEGIN
         END
 
 
-        /* =================================================
-           COMMIT TRANSACTION
-        ================================================= */
 
         COMMIT TRANSACTION;
 
     END TRY
 
 
-    /* =====================================================
-       ERROR HANDLING SECTION
-    ===================================================== */
+   
 
     BEGIN CATCH
 
-        /* =================================================
-           ROLLBACK IF ERROR OCCURS
-        ================================================= */
+    
 
         IF @@TRANCOUNT > 0
             ROLLBACK TRANSACTION;
 
-
-        /* =================================================
-           DISPLAY ERROR MESSAGE
-        ================================================= */
 
         PRINT 'Error occurred while processing leave balance.';
 
