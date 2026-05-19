@@ -1,6 +1,6 @@
 -- CREATE EMPLOYEES TABLE
 
-CREATE TABLE employee (
+CREATE TABLE employees (
     id SERIAL PRIMARY KEY,
 
     employee_name VARCHAR(100),
