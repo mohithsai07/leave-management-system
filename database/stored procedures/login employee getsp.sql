@@ -4,7 +4,7 @@
 
 CREATE PROCEDURE sp_login_employee
     @email NVARCHAR(100),
-    @password_hash NVARCHAR(255)
+    @password_hash NVARCHAR(100)
 AS
 BEGIN
     SET NOCOUNT ON;
