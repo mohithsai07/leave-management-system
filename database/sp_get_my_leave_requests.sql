@@ -1,4 +1,4 @@
-CREATE PROCEDURE sp_get_my_leave_requests
+CREATE OR ALTER  PROCEDURE sp_get_my_leave_requests
 (
     @employee_id INT
 )

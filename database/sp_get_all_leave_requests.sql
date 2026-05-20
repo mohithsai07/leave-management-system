@@ -1,4 +1,4 @@
-CREATE PROCEDURE sp_get_all_leave_requests
+CREATE OR ALTER  PROCEDURE sp_get_all_leave_requests
 AS
 BEGIN
 

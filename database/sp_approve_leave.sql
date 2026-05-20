@@ -1,8 +1,8 @@
-CREATE PROCEDURE sp_approve_leave
+CREATE OR ALTER PROCEDURE sp_approve_leave
 (
     @leave_request_id INT,
     @manager_id INT,
-    @manager_comments VARCHAR(MAX) = NULL
+    @manager_comments VARCHAR(100) = NULL
 )
 AS
 BEGIN

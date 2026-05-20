@@ -1,4 +1,7 @@
-CREATE PROCEDURE sp_get_employees
+CREATE or alter PROCEDURE sp_get_employees
+(
+    @employee_id INT = NULL
+)
 AS
 BEGIN
 
@@ -49,6 +52,10 @@ BEGIN
 
         LEFT JOIN employees manager
             ON e.manager_id = manager.employee_id
+
+        WHERE
+            @employee_id IS NULL
+            OR e.employee_id = @employee_id
 
         ORDER BY e.first_name ASC;
 

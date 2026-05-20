@@ -1,4 +1,4 @@
-CREATE PROCEDURE sp_get_roles
+CREATE OR ALTER  PROCEDURE sp_get_roles
 AS
 BEGIN
 

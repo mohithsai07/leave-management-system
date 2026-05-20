@@ -1,7 +1,7 @@
-CREATE PROCEDURE sp_login_employee
+CREATE OR ALTER  PROCEDURE sp_login_employee
 (
     @email VARCHAR(150),
-    @password_hash VARCHAR(MAX)
+    @password_hash VARCHAR(100)
 )
 AS
 BEGIN
@@ -78,6 +78,7 @@ BEGIN
         INNER JOIN roles r
             ON e.role_id = r.role_id
 
+        --Self Join
         LEFT JOIN employees m
             ON e.manager_id = m.employee_id
 

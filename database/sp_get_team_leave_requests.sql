@@ -1,4 +1,4 @@
-CREATE PROCEDURE sp_get_team_leave_requests
+CREATE OR ALTER  PROCEDURE sp_get_team_leave_requests
 (
     @manager_id INT
 )

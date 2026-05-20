@@ -1,4 +1,4 @@
-CREATE PROCEDURE sp_get_leave_types
+CREATE OR ALTER PROCEDURE sp_get_leave_types
 AS
 BEGIN
 

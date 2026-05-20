@@ -1,9 +1,9 @@
-CREATE PROCEDURE sp_upsert_leave_type
+CREATE OR ALTER  PROCEDURE sp_upsert_leave_type
 (
     @leave_type_id INT = NULL,
     @leave_name VARCHAR(100),
     @total_leaves INT,
-    @description VARCHAR(MAX) = NULL,
+    @description VARCHAR(100) = NULL,
     @status BIT = 1
 )
 AS

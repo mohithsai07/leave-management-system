@@ -1,11 +1,11 @@
-CREATE PROCEDURE sp_upsert_leave_request
+CREATE OR ALTER  PROCEDURE sp_upsert_leave_request
 (
     @leave_request_id INT = NULL,
     @employee_id INT,
     @leave_type_id INT,
     @from_date DATE,
     @to_date DATE,
-    @reason VARCHAR(MAX) = NULL,
+    @reason VARCHAR(100) = NULL,
     @notify_employee_id INT = NULL
 )
 AS

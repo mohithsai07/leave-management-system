@@ -1,4 +1,4 @@
-CREATE PROCEDURE sp_reject_leave
+CREATE OR ALTER  PROCEDURE sp_reject_leave
 (
     @leave_request_id INT,
     @manager_id INT,

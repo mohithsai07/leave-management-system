@@ -1,4 +1,4 @@
-CREATE PROCEDURE sp_upsert_employee
+CREATE OR ALTER  PROCEDURE sp_upsert_employee
 (
     @employee_id INT = NULL,
     @employee_code VARCHAR(20),
