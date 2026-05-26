@@ -1,3 +1,5 @@
+--MANGER ACTION
+
 CREATE OR ALTER  PROCEDURE sp_reject_leave
 (
     @leave_request_id INT,

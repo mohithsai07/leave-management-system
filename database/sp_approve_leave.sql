@@ -1,3 +1,5 @@
+--MANAGER SP
+
 CREATE OR ALTER PROCEDURE sp_approve_leave
 (
     @leave_request_id INT,
@@ -12,11 +14,9 @@ BEGIN
     BEGIN TRY
 
         BEGIN TRANSACTION;
+        
 
-        -- =====================================
         -- VALIDATE MANAGER
-        -- =====================================
-
         IF NOT EXISTS
         (
             SELECT 1
@@ -64,7 +64,12 @@ BEGIN
             AND e.manager_id = @manager_id
         )
         BEGIN
-            RAISERROR('You are not authorized to approve this request.', 16, 1);
+            RAISERROR(
+                'You are not authorized to approve this request.',
+                16,
+                1
+            );
+
             ROLLBACK TRANSACTION;
             RETURN;
         END
@@ -82,7 +87,12 @@ BEGIN
             AND status <> 'Pending'
         )
         BEGIN
-            RAISERROR('Only pending leave requests can be approved.', 16, 1);
+            RAISERROR(
+                'Only pending leave requests can be approved.',
+                16,
+                1
+            );
+
             ROLLBACK TRANSACTION;
             RETURN;
         END
@@ -94,14 +104,15 @@ BEGIN
 
         UPDATE leave_requests
         SET
-
             status = 'Approved',
 
             approved_by = @manager_id,
 
             approved_at = GETDATE(),
 
-            manager_comments = @manager_comments
+            manager_comments = @manager_comments,
+
+            updated_at = GETDATE()
 
         WHERE leave_request_id = @leave_request_id;
 
@@ -114,6 +125,7 @@ BEGIN
         -- =====================================
 
         SELECT
+            1 AS success,
             'Leave approved successfully.' AS message;
 
     END TRY
@@ -123,7 +135,8 @@ BEGIN
         ROLLBACK TRANSACTION;
 
         SELECT
-            ERROR_MESSAGE() AS error_message;
+            0 AS success,
+            ERROR_MESSAGE() AS message;
 
     END CATCH
 

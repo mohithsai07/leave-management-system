@@ -1,3 +1,5 @@
+--ADMIN SP TO GET EMPLOYEE DATA
+
 CREATE or alter PROCEDURE sp_get_employees
 (
     @employee_id INT = NULL

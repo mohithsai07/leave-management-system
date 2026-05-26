@@ -1,3 +1,5 @@
+--ADMIN SP
+
 CREATE OR ALTER  PROCEDURE sp_upsert_leave_type
 (
     @leave_type_id INT = NULL,
@@ -74,7 +76,7 @@ BEGIN
                 GETDATE()
             );
 
-
+            --stores last inserted value
             SET @new_leave_type_id = SCOPE_IDENTITY();
 
 

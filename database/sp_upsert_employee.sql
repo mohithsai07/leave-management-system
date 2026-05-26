@@ -1,14 +1,21 @@
-CREATE OR ALTER  PROCEDURE sp_upsert_employee
+CREATE OR ALTER PROCEDURE sp_upsert_employee
 (
     @employee_id INT = NULL,
-    @employee_code VARCHAR(20),
+
     @first_name VARCHAR(100),
+
     @last_name VARCHAR(100) = NULL,
+
     @email VARCHAR(150),
+
     @password_hash VARCHAR(MAX),
+
     @role_id INT,
+
     @manager_id INT = NULL,
+
     @department VARCHAR(100) = NULL,
+
     @status BIT = 1
 )
 AS
@@ -22,6 +29,10 @@ BEGIN
 
         DECLARE @new_employee_id INT;
 
+        DECLARE @employee_code VARCHAR(20);
+
+        DECLARE @next_number INT;
+
         -- =====================================
         -- VALIDATE ROLE
         -- =====================================
@@ -33,9 +44,45 @@ BEGIN
             WHERE role_id = @role_id
         )
         BEGIN
+
             RAISERROR('Invalid role.', 16, 1);
+
             ROLLBACK TRANSACTION;
+
             RETURN;
+
+        END
+
+
+        -- =====================================
+        -- VALIDATE MANAGER
+        -- ONLY ADMIN OR MANAGER CAN BE MANAGER
+        -- =====================================
+
+        IF @manager_id IS NOT NULL
+        BEGIN
+
+            IF NOT EXISTS
+            (
+                SELECT 1
+                FROM employees
+                WHERE employee_id = @manager_id
+                AND role_id IN (1,2)
+            )
+            BEGIN
+
+                RAISERROR(
+                    'Invalid manager_id. Selected employee is not a Manager or Admin.',
+                    16,
+                    1
+                );
+
+                ROLLBACK TRANSACTION;
+
+                RETURN;
+
+            END
+
         END
 
 
@@ -54,30 +101,13 @@ BEGIN
                 )
         )
         BEGIN
+
             RAISERROR('Email already exists.', 16, 1);
+
             ROLLBACK TRANSACTION;
+
             RETURN;
-        END
 
-
-        -- =====================================
-        -- CHECK DUPLICATE EMPLOYEE CODE
-        -- =====================================
-
-        IF EXISTS
-        (
-            SELECT 1
-            FROM employees
-            WHERE employee_code = @employee_code
-            AND (
-                    @employee_id IS NULL
-                    OR employee_id <> @employee_id
-                )
-        )
-        BEGIN
-            RAISERROR('Employee code already exists.', 16, 1);
-            ROLLBACK TRANSACTION;
-            RETURN;
         END
 
 
@@ -87,6 +117,107 @@ BEGIN
 
         IF (@employee_id IS NULL)
         BEGIN
+
+            -- =================================
+            -- MANAGER CODE GENERATION
+            -- MGR2001 SERIES
+            -- =================================
+
+            IF @role_id = 2
+            BEGIN
+
+                SELECT
+                    @next_number =
+                    ISNULL(
+                        MAX(
+                            TRY_CAST(
+                                SUBSTRING(employee_code,4,LEN(employee_code))
+                                AS INT
+                            )
+                        ),
+                        2000
+                    )
+
+                FROM employees
+                WHERE employee_code LIKE 'MGR2%';
+
+
+                SET @next_number = @next_number + 1;
+
+
+                SET @employee_code =
+                    'MGR' + CAST(@next_number AS VARCHAR);
+
+            END
+
+
+            -- =================================
+            -- EMPLOYEE CODE GENERATION
+            -- EMP1001 SERIES
+            -- =================================
+
+            ELSE IF @role_id = 3
+            BEGIN
+
+                SELECT
+                    @next_number =
+                    ISNULL(
+                        MAX(
+                            TRY_CAST(
+                                SUBSTRING(employee_code,4,LEN(employee_code))
+                                AS INT
+                            )
+                        ),
+                        1000
+                    )
+
+                FROM employees
+                WHERE employee_code LIKE 'EMP1%';
+
+
+                SET @next_number = @next_number + 1;
+
+
+                SET @employee_code =
+                    'EMP' + CAST(@next_number AS VARCHAR);
+
+            END
+
+
+            -- =================================
+            -- ADMIN CODE GENERATION
+            -- ADMIN001 SERIES
+            -- =================================
+
+            ELSE IF @role_id = 1
+            BEGIN
+
+                SELECT
+                    @next_number =
+                    ISNULL(
+                        MAX(
+                            TRY_CAST(
+                                SUBSTRING(employee_code,6,LEN(employee_code))
+                                AS INT
+                            )
+                        ),
+                        0
+                    ) + 1
+
+                FROM employees
+                WHERE employee_code LIKE 'ADMIN%';
+
+
+                SET @employee_code =
+                    'ADMIN' +
+                    RIGHT('000' + CAST(@next_number AS VARCHAR),3);
+
+            END
+
+
+            -- =================================
+            -- INSERT EMPLOYEE
+            -- =================================
 
             INSERT INTO employees
             (
@@ -116,7 +247,6 @@ BEGIN
                 GETDATE(),
                 GETDATE()
             );
-
 
 
             SET @new_employee_id = SCOPE_IDENTITY();
@@ -174,16 +304,22 @@ BEGIN
                 WHERE employee_id = @employee_id
             )
             BEGIN
+
                 RAISERROR('Employee not found.', 16, 1);
+
                 ROLLBACK TRANSACTION;
+
                 RETURN;
+
             END
 
 
+            -- =================================
+            -- EMPLOYEE CODE WILL NOT CHANGE
+            -- =================================
+
             UPDATE employees
             SET
-
-                employee_code = @employee_code,
 
                 first_name = @first_name,
 
@@ -216,7 +352,10 @@ BEGIN
         -- =====================================
 
         SELECT
-            'Employee saved successfully.' AS message;
+
+            'Employee saved successfully.' AS message,
+
+            @employee_code AS employee_code;
 
     END TRY
 

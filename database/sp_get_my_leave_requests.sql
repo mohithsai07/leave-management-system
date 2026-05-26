@@ -1,3 +1,5 @@
+--EMPLOYEE SP TO GET THEIR LEAVE REQUEST
+
 CREATE OR ALTER  PROCEDURE sp_get_my_leave_requests
 (
     @employee_id INT

@@ -1,3 +1,5 @@
+--EMPLOYEE SP TO REQUEST A LEAVE
+
 CREATE OR ALTER  PROCEDURE sp_upsert_leave_request
 (
     @leave_request_id INT = NULL,

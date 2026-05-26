@@ -1,3 +1,5 @@
+--EMPLOYEE GET SP FOR DASHBOARD
+
 CREATE OR ALTER  PROCEDURE sp_get_leave_dashboard
 (
     @employee_id INT
