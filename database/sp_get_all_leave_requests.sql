@@ -1,6 +1,9 @@
---ADMIN SP TO GET LEAVE REQUEST OF ALL EMPLOYEES 
+-- ADMIN SP TO GET LEAVE REQUEST OF ALL EMPLOYEES
 
-CREATE OR ALTER  PROCEDURE sp_get_all_leave_requests
+CREATE OR ALTER PROCEDURE sp_get_all_leave_requests
+(
+    @employee_id INT = NULL
+)
 AS
 BEGIN
 
@@ -56,6 +59,12 @@ BEGIN
 
         LEFT JOIN employees approver
             ON lr.approved_by = approver.employee_id
+
+        WHERE
+        (
+            @employee_id IS NULL
+            OR e.employee_id = @employee_id
+        )
 
         ORDER BY lr.applied_at DESC;
 

@@ -31,6 +31,7 @@ BEGIN
 
         -- =====================================
         -- VALIDATE EMPLOYEE LOGIN
+        --SELECT 1 -> to check existence.
         -- =====================================
 
         IF NOT EXISTS
@@ -84,6 +85,7 @@ BEGIN
         LEFT JOIN employees m
             ON e.manager_id = m.employee_id
 
+        --Finally filter only the valid login user.
         WHERE e.email = @email
         AND e.password_hash = @password_hash
         AND e.status = 1;

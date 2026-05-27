@@ -1,8 +1,9 @@
---MANAGER SP
+-- MANAGER SP
 
-CREATE OR ALTER  PROCEDURE sp_get_team_leave_requests
+CREATE OR ALTER PROCEDURE sp_get_team_leave_requests
 (
-    @manager_id INT
+    @manager_id INT,
+    @employee_id INT = NULL
 )
 AS
 BEGIN
@@ -23,8 +24,10 @@ BEGIN
             AND status = 1
         )
         BEGIN
+
             RAISERROR('Invalid or inactive manager.', 16, 1);
             RETURN;
+
         END
 
 
@@ -71,7 +74,14 @@ BEGIN
         INNER JOIN leave_types lt
             ON lr.leave_type_id = lt.leave_type_id
 
-        WHERE e.manager_id = @manager_id
+        WHERE
+            e.manager_id = @manager_id
+
+            AND
+            (
+                @employee_id IS NULL
+                OR e.employee_id = @employee_id
+            )
 
         ORDER BY lr.applied_at DESC;
 

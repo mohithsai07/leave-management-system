@@ -1,11 +1,14 @@
---EMPLOYEE GET SP FOR DASHBOARD
+-- EMPLOYEE GET SP FOR DASHBOARD
 
-CREATE OR ALTER  PROCEDURE sp_get_leave_dashboard
+CREATE OR ALTER PROCEDURE sp_get_leave_dashboard
 (
     @employee_id INT
 )
 AS
 BEGIN
+
+    -- Stops SQL Server from showing messages like:
+    -- (5 rows affected)
 
     SET NOCOUNT ON;
 
@@ -23,8 +26,10 @@ BEGIN
             AND status = 1
         )
         BEGIN
+
             RAISERROR('Invalid or inactive employee.', 16, 1);
             RETURN;
+
         END
 
 
@@ -44,9 +49,18 @@ BEGIN
 
             elb.remaining_leaves,
 
+            elb.note,
+
             elb.year,
 
-            elb.updated_at
+            -- Full datetime
+            elb.updated_at,
+
+            -- Separate date
+            CAST(elb.updated_at AS DATE) AS updated_date,
+
+            -- Separate time
+            CAST(elb.updated_at AS TIME) AS updated_time
 
         FROM employee_leave_balances elb
 
