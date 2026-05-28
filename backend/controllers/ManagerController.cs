@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 using System.Data;
@@ -7,6 +8,7 @@ namespace LeaveManagementAPI.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize(Roles = "Manager")]
     public class ManagerController : ControllerBase
     {
         private readonly IConfiguration _configuration;
@@ -16,15 +18,20 @@ namespace LeaveManagementAPI.Controllers
             _configuration = configuration;
         }
 
-
         // =========================================
         // GET TEAM LEAVES
         // =========================================
 
-        [HttpGet("team-leaves/{managerId}")]
-        public IActionResult GetTeamLeaves(int managerId)
+        [HttpGet("team-leaves")]
+        public IActionResult GetTeamLeaves(
+            [FromQuery] int? employeeId
+        )
         {
             List<object> leaves = new List<object>();
+
+            int managerId = Convert.ToInt32(
+                User.FindFirst("employeeId")?.Value
+            );
 
             SqlConnection con = new SqlConnection(
                 _configuration.GetConnectionString("DefaultConnection")
@@ -42,6 +49,11 @@ namespace LeaveManagementAPI.Controllers
                 managerId
             );
 
+            cmd.Parameters.AddWithValue(
+                "@employee_id",
+                (object?)employeeId ?? DBNull.Value
+            );
+
             con.Open();
 
             SqlDataReader reader = cmd.ExecuteReader();
@@ -51,17 +63,32 @@ namespace LeaveManagementAPI.Controllers
                 leaves.Add(new
                 {
                     leave_request_id = reader["leave_request_id"],
+
                     employee_id = reader["employee_id"],
+
                     employee_code = reader["employee_code"],
+
                     employee_name = reader["employee_name"],
+
                     department = reader["department"],
+
                     leave_name = reader["leave_name"],
+
                     from_date = reader["from_date"],
+
                     to_date = reader["to_date"],
+
                     total_days = reader["total_days"],
+
                     reason = reader["reason"],
+
                     status = reader["status"],
-                    applied_at = reader["applied_at"]
+
+                    applied_at = reader["applied_at"],
+
+                    manager_comments = reader["manager_comments"],
+
+                    approved_at = reader["approved_at"]
                 });
             }
 
@@ -70,15 +97,18 @@ namespace LeaveManagementAPI.Controllers
             return Ok(leaves);
         }
 
-
         // =========================================
         // GET PENDING LEAVES
         // =========================================
 
-        [HttpGet("pending/{managerId}")]
-        public IActionResult GetPendingLeaves(int managerId)
+        [HttpGet("pending")]
+        public IActionResult GetPendingLeaves()
         {
             List<object> pendingLeaves = new List<object>();
+
+            int managerId = Convert.ToInt32(
+                User.FindFirst("employeeId")?.Value
+            );
 
             SqlConnection con = new SqlConnection(
                 _configuration.GetConnectionString("DefaultConnection")
@@ -105,15 +135,25 @@ namespace LeaveManagementAPI.Controllers
                 pendingLeaves.Add(new
                 {
                     leave_request_id = reader["leave_request_id"],
+
                     employee_id = reader["employee_id"],
+
                     employee_code = reader["employee_code"],
+
                     employee_name = reader["employee_name"],
+
                     department = reader["department"],
+
                     leave_name = reader["leave_name"],
+
                     from_date = reader["from_date"],
+
                     to_date = reader["to_date"],
+
                     total_days = reader["total_days"],
+
                     reason = reader["reason"],
+
                     applied_at = reader["applied_at"]
                 });
             }
@@ -124,15 +164,93 @@ namespace LeaveManagementAPI.Controllers
         }
 
 
+        [HttpGet("employee-history/{employeeId}")]
+        public IActionResult GetEmployeeLeaveHistory(
+    int employeeId
+)
+        {
+            List<object> leaves = new List<object>();
+
+            int managerId = Convert.ToInt32(
+                User.FindFirst("employeeId")?.Value
+            );
+
+            SqlConnection con = new SqlConnection(
+                _configuration.GetConnectionString("DefaultConnection")
+            );
+
+            SqlCommand cmd = new SqlCommand(
+                "sp_get_employee_leave_history",
+                con
+            );
+
+            cmd.CommandType = CommandType.StoredProcedure;
+
+            cmd.Parameters.AddWithValue(
+                "@manager_id",
+                managerId
+            );
+
+            cmd.Parameters.AddWithValue(
+                "@employee_id",
+                employeeId
+            );
+
+            con.Open();
+
+            SqlDataReader reader = cmd.ExecuteReader();
+
+            while (reader.Read())
+            {
+                leaves.Add(new
+                {
+                    leave_request_id =
+                        reader["leave_request_id"],
+
+                    employee_name =
+                        reader["employee_name"],
+
+                    leave_name =
+                        reader["leave_name"],
+
+                    from_date =
+                        reader["from_date"],
+
+                    to_date =
+                        reader["to_date"],
+
+                    total_days =
+                        reader["total_days"],
+
+                    reason =
+                        reader["reason"],
+
+                    status =
+                        reader["status"],
+
+                    applied_at =
+                        reader["applied_at"]
+                });
+            }
+
+            con.Close();
+
+            return Ok(leaves);
+        }
+
         // =========================================
         // APPROVE LEAVE
         // =========================================
 
         [HttpPut("approve")]
         public IActionResult ApproveLeave(
-            ApproveRejectModel model
+            [FromBody] ApproveRejectModel model
         )
         {
+            int managerId = Convert.ToInt32(
+                User.FindFirst("employeeId")?.Value
+            );
+
             SqlConnection con = new SqlConnection(
                 _configuration.GetConnectionString("DefaultConnection")
             );
@@ -149,14 +267,16 @@ namespace LeaveManagementAPI.Controllers
                 model.LeaveRequestId
             );
 
+            // IMPORTANT:
+            // Manager ID comes from JWT token
             cmd.Parameters.AddWithValue(
                 "@manager_id",
-                model.ManagerId
+                managerId
             );
 
             cmd.Parameters.AddWithValue(
                 "@manager_comments",
-                model.ManagerComments ?? (object)DBNull.Value
+                (object?)model.ManagerComments ?? DBNull.Value
             );
 
             con.Open();
@@ -169,7 +289,7 @@ namespace LeaveManagementAPI.Controllers
             {
                 response.Add(new
                 {
-                    message = reader["message"]
+                    message = reader[0]
                 });
             }
 
@@ -178,16 +298,19 @@ namespace LeaveManagementAPI.Controllers
             return Ok(response);
         }
 
-
         // =========================================
         // REJECT LEAVE
         // =========================================
 
         [HttpPut("reject")]
         public IActionResult RejectLeave(
-            ApproveRejectModel model
+            [FromBody] ApproveRejectModel model
         )
         {
+            int managerId = Convert.ToInt32(
+                User.FindFirst("employeeId")?.Value
+            );
+
             SqlConnection con = new SqlConnection(
                 _configuration.GetConnectionString("DefaultConnection")
             );
@@ -204,14 +327,16 @@ namespace LeaveManagementAPI.Controllers
                 model.LeaveRequestId
             );
 
+            // IMPORTANT:
+            // Manager ID comes from JWT token
             cmd.Parameters.AddWithValue(
                 "@manager_id",
-                model.ManagerId
+                managerId
             );
 
             cmd.Parameters.AddWithValue(
                 "@manager_comments",
-                model.ManagerComments ?? (object)DBNull.Value
+                (object?)model.ManagerComments ?? DBNull.Value
             );
 
             con.Open();
@@ -224,7 +349,7 @@ namespace LeaveManagementAPI.Controllers
             {
                 response.Add(new
                 {
-                    message = reader["message"]
+                    message = reader[0]
                 });
             }
 
