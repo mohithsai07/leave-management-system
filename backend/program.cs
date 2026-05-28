@@ -1,58 +1,94 @@
-var builder = WebApplication.CreateBuilder(args);
- 
-// 1. 🛡️ THE SECURITY BRIDGE (CORS)
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using System.Security.Claims;
+using System.Text;
 
-// This tells the C# API to accept requests from your React Frontend
+
+var builder = WebApplication.CreateBuilder(args);
+
+// =====================================
+// CORS
+// =====================================
 
 builder.Services.AddCors(options =>
-
 {
-
     options.AddPolicy("AllowReactApp",
-
         policy =>
-
         {
-
-            policy.WithOrigins("http://localhost:5173") // Your exact React port
-
+            policy.WithOrigins("http://localhost:5173")
                   .AllowAnyHeader()
-
                   .AllowAnyMethod();
-
         });
-
 });
- 
+
+// =====================================
+// CONTROLLERS
+// =====================================
+
 builder.Services.AddControllers();
 
 builder.Services.AddEndpointsApiExplorer();
 
-builder.Services.AddSwaggerGen();
- 
+// =====================================
+// JWT AUTHENTICATION
+// =====================================
+
+builder.Services
+    .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters =
+            new TokenValidationParameters
+            {
+                ValidateIssuer = true,
+
+                ValidateAudience = true,
+
+                ValidateLifetime = true,
+
+                ValidateIssuerSigningKey = true,
+
+                ValidIssuer =
+                    builder.Configuration["Jwt:Issuer"],
+
+                ValidAudience =
+                    builder.Configuration["Jwt:Audience"],
+
+                IssuerSigningKey =
+                    new SymmetricSecurityKey(
+                        Encoding.UTF8.GetBytes(
+                            builder.Configuration["Jwt:Key"] ?? ""
+                        )
+                    ),
+
+                RoleClaimType = ClaimTypes.Role
+            };
+    });
+
+// =====================================
+// AUTHORIZATION
+// =====================================
+
+builder.Services.AddAuthorization();
+
 var app = builder.Build();
- 
-// Configure the HTTP request pipeline.
 
-if (app.Environment.IsDevelopment())
+// =====================================
+// MIDDLEWARE
+// =====================================
 
-{
-
-    app.UseSwagger();
-
-    app.UseSwaggerUI();
-
-}
- 
 app.UseHttpsRedirection();
- 
-// 2. 🚦 ACTIVATE CORS (Must be placed right here, before Authorization)
+
+// Enable CORS
 
 app.UseCors("AllowReactApp");
- 
+
+// IMPORTANT
+
+app.UseAuthentication();
+
 app.UseAuthorization();
- 
+
 app.MapControllers();
- 
+
 app.Run();
- 
