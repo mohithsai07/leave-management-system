@@ -1,6 +1,4 @@
---MANGER ACTION
-
-CREATE OR ALTER  PROCEDURE sp_reject_leave
+CREATE OR ALTER PROCEDURE sp_reject_leave
 (
     @leave_request_id INT,
     @manager_id INT,
@@ -15,10 +13,6 @@ BEGIN
 
         BEGIN TRANSACTION;
 
-        DECLARE @employee_id INT;
-        DECLARE @leave_type_id INT;
-        DECLARE @total_days INT;
-
         -- =====================================
         -- VALIDATE MANAGER
         -- =====================================
@@ -31,9 +25,16 @@ BEGIN
             AND status = 1
         )
         BEGIN
-            RAISERROR('Invalid or inactive manager.', 16, 1);
+
+            RAISERROR(
+                'Invalid or inactive manager.',
+                16,
+                1
+            );
+
             ROLLBACK TRANSACTION;
             RETURN;
+
         END
 
 
@@ -48,9 +49,16 @@ BEGIN
             WHERE leave_request_id = @leave_request_id
         )
         BEGIN
-            RAISERROR('Leave request not found.', 16, 1);
+
+            RAISERROR(
+                'Leave request not found.',
+                16,
+                1
+            );
+
             ROLLBACK TRANSACTION;
             RETURN;
+
         END
 
 
@@ -70,9 +78,16 @@ BEGIN
             AND e.manager_id = @manager_id
         )
         BEGIN
-            RAISERROR('You are not authorized to reject this request.', 16, 1);
+
+            RAISERROR(
+                'You are not authorized to reject this request.',
+                16,
+                1
+            );
+
             ROLLBACK TRANSACTION;
             RETURN;
+
         END
 
 
@@ -88,27 +103,17 @@ BEGIN
             AND status <> 'Pending'
         )
         BEGIN
-            RAISERROR('Only pending leave requests can be rejected.', 16, 1);
+
+            RAISERROR(
+                'Only pending leave requests can be rejected.',
+                16,
+                1
+            );
+
             ROLLBACK TRANSACTION;
             RETURN;
+
         END
-
-
-        -- =====================================
-        -- GET LEAVE DETAILS
-        -- =====================================
-
-        SELECT
-
-            @employee_id = employee_id,
-
-            @leave_type_id = leave_type_id,
-
-            @total_days = total_days
-
-        FROM leave_requests
-
-        WHERE leave_request_id = @leave_request_id;
 
 
         -- =====================================
@@ -129,25 +134,6 @@ BEGIN
         WHERE leave_request_id = @leave_request_id;
 
 
-        -- =====================================
-        -- RESTORE LEAVE BALANCE
-        -- =====================================
-
-        UPDATE employee_leave_balances
-        SET
-
-            used_leaves =
-            used_leaves - @total_days,
-
-            remaining_leaves =
-            remaining_leaves + @total_days,
-
-            updated_at = GETDATE()
-
-        WHERE employee_id = @employee_id
-        AND leave_type_id = @leave_type_id;
-
-
         COMMIT TRANSACTION;
 
 
@@ -156,6 +142,9 @@ BEGIN
         -- =====================================
 
         SELECT
+
+            1 AS success,
+
             'Leave rejected successfully.' AS message;
 
     END TRY
@@ -165,7 +154,10 @@ BEGIN
         ROLLBACK TRANSACTION;
 
         SELECT
-            ERROR_MESSAGE() AS error_message;
+
+            0 AS success,
+
+            ERROR_MESSAGE() AS message;
 
     END CATCH
 

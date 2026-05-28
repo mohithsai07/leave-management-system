@@ -1,5 +1,3 @@
---MANAGER SP
-
 CREATE OR ALTER PROCEDURE sp_approve_leave
 (
     @leave_request_id INT,
@@ -14,9 +12,12 @@ BEGIN
     BEGIN TRY
 
         BEGIN TRANSACTION;
-        
 
+
+        -- =====================================
         -- VALIDATE MANAGER
+        -- =====================================
+
         IF NOT EXISTS
         (
             SELECT 1
@@ -25,9 +26,16 @@ BEGIN
             AND status = 1
         )
         BEGIN
-            RAISERROR('Invalid or inactive manager.', 16, 1);
+
+            RAISERROR(
+                'Invalid or inactive manager.',
+                16,
+                1
+            );
+
             ROLLBACK TRANSACTION;
             RETURN;
+
         END
 
 
@@ -42,9 +50,16 @@ BEGIN
             WHERE leave_request_id = @leave_request_id
         )
         BEGIN
-            RAISERROR('Leave request not found.', 16, 1);
+
+            RAISERROR(
+                'Leave request not found.',
+                16,
+                1
+            );
+
             ROLLBACK TRANSACTION;
             RETURN;
+
         END
 
 
@@ -64,6 +79,7 @@ BEGIN
             AND e.manager_id = @manager_id
         )
         BEGIN
+
             RAISERROR(
                 'You are not authorized to approve this request.',
                 16,
@@ -72,6 +88,7 @@ BEGIN
 
             ROLLBACK TRANSACTION;
             RETURN;
+
         END
 
 
@@ -87,6 +104,7 @@ BEGIN
             AND status <> 'Pending'
         )
         BEGIN
+
             RAISERROR(
                 'Only pending leave requests can be approved.',
                 16,
@@ -95,6 +113,58 @@ BEGIN
 
             ROLLBACK TRANSACTION;
             RETURN;
+
+        END
+
+
+        -- =====================================
+        -- GET LEAVE DETAILS
+        -- =====================================
+
+        DECLARE @employee_id INT;
+        DECLARE @leave_type_id INT;
+        DECLARE @total_days INT;
+        DECLARE @remaining_leaves INT;
+
+        SELECT
+
+            @employee_id = employee_id,
+
+            @leave_type_id = leave_type_id,
+
+            @total_days = total_days
+
+        FROM leave_requests
+
+        WHERE leave_request_id = @leave_request_id;
+
+
+        -- =====================================
+        -- CHECK CURRENT LEAVE BALANCE
+        -- =====================================
+
+        SELECT
+
+            @remaining_leaves = remaining_leaves
+
+        FROM employee_leave_balances
+
+        WHERE employee_id = @employee_id
+        AND leave_type_id = @leave_type_id;
+
+
+        IF (@remaining_leaves < @total_days)
+        BEGIN
+
+            RAISERROR(
+                'Insufficient remaining leave balance.',
+                16,
+                1
+            );
+
+            ROLLBACK TRANSACTION;
+            RETURN;
+
         END
 
 
@@ -104,17 +174,35 @@ BEGIN
 
         UPDATE leave_requests
         SET
+
             status = 'Approved',
 
             approved_by = @manager_id,
 
             approved_at = GETDATE(),
 
-            manager_comments = @manager_comments,
+            manager_comments = @manager_comments
+
+        WHERE leave_request_id = @leave_request_id;
+
+
+        -- =====================================
+        -- UPDATE LEAVE BALANCE
+        -- =====================================
+
+        UPDATE employee_leave_balances
+        SET
+
+            used_leaves =
+                used_leaves + @total_days,
+
+            remaining_leaves =
+                remaining_leaves - @total_days,
 
             updated_at = GETDATE()
 
-        WHERE leave_request_id = @leave_request_id;
+        WHERE employee_id = @employee_id
+        AND leave_type_id = @leave_type_id;
 
 
         COMMIT TRANSACTION;
@@ -125,7 +213,9 @@ BEGIN
         -- =====================================
 
         SELECT
+
             1 AS success,
+
             'Leave approved successfully.' AS message;
 
     END TRY
@@ -135,7 +225,9 @@ BEGIN
         ROLLBACK TRANSACTION;
 
         SELECT
+
             0 AS success,
+
             ERROR_MESSAGE() AS message;
 
     END CATCH

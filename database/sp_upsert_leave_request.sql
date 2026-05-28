@@ -1,6 +1,4 @@
---EMPLOYEE SP TO REQUEST A LEAVE
-
-CREATE OR ALTER  PROCEDURE sp_upsert_leave_request
+CREATE OR ALTER PROCEDURE sp_upsert_leave_request
 (
     @leave_request_id INT = NULL,
     @employee_id INT,
@@ -34,9 +32,17 @@ BEGIN
             AND status = 1
         )
         BEGIN
-            RAISERROR('Invalid employee.', 16, 1);
+
+            RAISERROR(
+                'Invalid employee.',
+                16,
+                1
+            );
+
             ROLLBACK TRANSACTION;
+
             RETURN;
+
         END
 
 
@@ -46,9 +52,37 @@ BEGIN
 
         IF (@from_date > @to_date)
         BEGIN
-            RAISERROR('From date cannot be greater than To date.', 16, 1);
+
+            RAISERROR(
+                'From date cannot be greater than To date.',
+                16,
+                1
+            );
+
             ROLLBACK TRANSACTION;
+
             RETURN;
+
+        END
+
+
+        -- =====================================
+        -- PREVENT PAST DATE LEAVES
+        -- =====================================
+
+        IF (@from_date < CAST(GETDATE() AS DATE))
+        BEGIN
+
+            RAISERROR(
+                'Cannot apply leave for past dates.',
+                16,
+                1
+            );
+
+            ROLLBACK TRANSACTION;
+
+            RETURN;
+
         END
 
 
@@ -57,7 +91,11 @@ BEGIN
         -- =====================================
 
         SET @total_days =
-        DATEDIFF(DAY, @from_date, @to_date) + 1;
+        DATEDIFF(
+            DAY,
+            @from_date,
+            @to_date
+        ) + 1;
 
 
         -- =====================================
@@ -70,20 +108,32 @@ BEGIN
             FROM leave_requests
             WHERE employee_id = @employee_id
             AND status IN ('Pending', 'Approved')
-            AND (
-                    @from_date BETWEEN from_date AND to_date
-                    OR
-                    @to_date BETWEEN from_date AND to_date
-                )
-            AND (
-                    @leave_request_id IS NULL
-                    OR leave_request_id <> @leave_request_id
-                )
+            AND
+            (
+                @from_date BETWEEN from_date AND to_date
+                OR
+                @to_date BETWEEN from_date AND to_date
+                OR
+                from_date BETWEEN @from_date AND @to_date
+            )
+            AND
+            (
+                @leave_request_id IS NULL
+                OR leave_request_id <> @leave_request_id
+            )
         )
         BEGIN
-            RAISERROR('Overlapping leave request already exists.', 16, 1);
+
+            RAISERROR(
+                'Overlapping leave request already exists.',
+                16,
+                1
+            );
+
             ROLLBACK TRANSACTION;
+
             RETURN;
+
         END
 
 
@@ -102,11 +152,35 @@ BEGIN
         -- VALIDATE LEAVE BALANCE
         -- =====================================
 
+        IF (@remaining_leaves IS NULL)
+        BEGIN
+
+            RAISERROR(
+                'Leave balance not assigned.',
+                16,
+                1
+            );
+
+            ROLLBACK TRANSACTION;
+
+            RETURN;
+
+        END
+
+
         IF (@remaining_leaves < @total_days)
         BEGIN
-            RAISERROR('Insufficient leave balance.', 16, 1);
+
+            RAISERROR(
+                'Exceeding number of leaves.',
+                16,
+                1
+            );
+
             ROLLBACK TRANSACTION;
+
             RETURN;
+
         END
 
 
@@ -142,23 +216,6 @@ BEGIN
                 GETDATE()
             );
 
-
-            -- =================================
-            -- UPDATE LEAVE BALANCE
-            -- =================================
-
-            UPDATE employee_leave_balances
-            SET
-                used_leaves = used_leaves + @total_days,
-
-                remaining_leaves =
-                remaining_leaves - @total_days,
-
-                updated_at = GETDATE()
-
-            WHERE employee_id = @employee_id
-            AND leave_type_id = @leave_type_id;
-
         END
 
 
@@ -178,9 +235,17 @@ BEGIN
                 AND status = 'Pending'
             )
             BEGIN
-                RAISERROR('Only pending leave requests can be edited.', 16, 1);
+
+                RAISERROR(
+                    'Only pending leave requests can be edited.',
+                    16,
+                    1
+                );
+
                 ROLLBACK TRANSACTION;
+
                 RETURN;
+
             END
 
 
@@ -197,6 +262,10 @@ BEGIN
 
         END
 
+
+        -- =====================================
+        -- COMMIT
+        -- =====================================
 
         COMMIT TRANSACTION;
 
