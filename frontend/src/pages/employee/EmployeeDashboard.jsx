@@ -1,16 +1,76 @@
+import { useEffect, useState } from "react";
+
 import { useNavigate } from "react-router-dom";
+
+import api from "../../services/api";
+
+import {
+  CircularProgressbar,
+  buildStyles,
+} from "react-circular-progressbar";
+
+import "react-circular-progressbar/dist/styles.css";
 
 function EmployeeDashboard() {
 
   const navigate = useNavigate();
 
-  // =========================================
-  // LOGGED IN USER
-  // =========================================
-
   const user = JSON.parse(
     localStorage.getItem("user")
   );
+
+  const [leaveBalances, setLeaveBalances] = useState([]);
+
+  const [leaves, setLeaves] = useState([]);
+
+  const [loading, setLoading] = useState(true);
+
+  // =========================================
+  // FETCH DASHBOARD DATA
+  // =========================================
+
+  const fetchDashboardData = async () => {
+
+    try {
+
+      const leaveResponse = await api.get(
+        "/Employee/my-leaves"
+      );
+
+      const balanceResponse = await api.get(
+        "/Employee/dashboard"
+      );
+
+      setLeaves(
+        leaveResponse.data || []
+      );
+
+      setLeaveBalances(
+        balanceResponse.data || []
+      );
+
+    }
+    catch (error) {
+
+      console.log(error);
+
+      alert(
+        "Failed to load dashboard"
+      );
+
+    }
+    finally {
+
+      setLoading(false);
+
+    }
+  };
+
+  useEffect(() => {
+
+    fetchDashboardData();
+
+  }, []);
 
   // =========================================
   // LOGOUT
@@ -26,6 +86,28 @@ function EmployeeDashboard() {
 
     navigate("/");
   };
+
+  // =========================================
+  // LOADING
+  // =========================================
+
+  if (loading) {
+
+    return (
+
+      <div className="container mt-5">
+
+        <h4>
+          Loading Dashboard...
+        </h4>
+
+      </div>
+
+    );
+  }
+
+  const recentLeaves =
+    leaves.slice(0, 5);
 
   return (
 
@@ -70,8 +152,6 @@ function EmployeeDashboard() {
 
             <div className="row">
 
-              {/* EMPLOYEE ID */}
-
               <div className="col-md-4 mb-3">
 
                 <strong>
@@ -84,8 +164,6 @@ function EmployeeDashboard() {
 
               </div>
 
-              {/* EMAIL */}
-
               <div className="col-md-4 mb-3">
 
                 <strong>
@@ -97,8 +175,6 @@ function EmployeeDashboard() {
                 {user.email}
 
               </div>
-
-              {/* ROLE */}
 
               <div className="col-md-4 mb-3">
 
@@ -118,106 +194,348 @@ function EmployeeDashboard() {
 
         </div>
 
-        {/* DASHBOARD ACTIONS */}
+        {/* APPLY LEAVE CARD */}
 
-        <div className="row">
+        <div className="card shadow border-0 mb-4">
 
-          {/* APPLY LEAVE */}
+          <div className="card-body d-flex justify-content-between align-items-center">
 
-          <div className="col-md-4 mb-4">
+            <div>
 
-            <div className="card shadow border-0 h-100">
+              <h3>
+                Apply Leave
+              </h3>
 
-              <div className="card-body d-flex flex-column">
+              <p className="mb-0">
 
-                <h2 className="mb-3">
-                  Apply Leave
-                </h2>
+                Submit a new leave request.
 
-                <p className="flex-grow-1">
+              </p>
 
-                  Submit a new leave request.
+            </div>
 
-                </p>
+            <button
+              className="btn btn-primary"
+              onClick={() =>
+                navigate("/apply-leave")
+              }
+            >
+              Apply Leave
+            </button>
 
-                <button
-                  className="btn btn-primary w-100"
-                  onClick={() =>
-                    navigate("/apply-leave")
-                  }
-                >
-                  Apply Leave
-                </button>
+          </div>
 
-              </div>
+        </div>
+
+                {/* RECENT LEAVE REQUESTS */}
+
+        <div className="card shadow border-0 mb-4">
+
+          <div className="card-body">
+
+            <div className="d-flex justify-content-between align-items-center mb-3">
+
+              <h3>
+                Recent Leave Requests
+              </h3>
+
+              <button
+                className="btn btn-success"
+                onClick={() =>
+                  navigate("/my-leaves")
+                }
+              >
+                View All
+              </button>
+
+            </div>
+
+            <div
+              style={{
+                maxHeight: "350px",
+                overflowY: "auto"
+              }}
+            >
+
+              <table className="table table-bordered table-hover align-middle">
+
+                <thead className="table-dark">
+
+                  <tr>
+
+                    <th>Leave Type</th>
+
+                    <th>From Date</th>
+
+                    <th>To Date</th>
+
+                    <th>Reason</th>
+
+                    <th>Status</th>
+
+                  </tr>
+
+                </thead>
+
+                <tbody>
+
+                  {recentLeaves.length > 0 ? (
+
+                    recentLeaves.map((leave) => (
+
+                      <tr
+                        key={
+                          leave.leave_request_id
+                        }
+                      >
+
+                        <td>
+                          {leave.leave_name}
+                        </td>
+
+                        <td>
+
+                          {leave.from_date
+                            ? new Date(
+                                leave.from_date
+                              ).toLocaleDateString()
+                            : "-"}
+
+                        </td>
+
+                        <td>
+
+                          {leave.to_date
+                            ? new Date(
+                                leave.to_date
+                              ).toLocaleDateString()
+                            : "-"}
+
+                        </td>
+
+                        <td>
+                          {leave.reason}
+                        </td>
+
+                        <td>
+
+                          <span
+                            className={
+                              leave.status === "Approved"
+
+                                ? "badge bg-success"
+
+                                : leave.status === "Rejected"
+
+                                ? "badge bg-danger"
+
+                                : "badge bg-warning text-dark"
+                            }
+                          >
+
+                            {leave.status}
+
+                          </span>
+
+                        </td>
+
+                      </tr>
+
+                    ))
+
+                  ) : (
+
+                    <tr>
+
+                      <td
+                        colSpan="5"
+                        className="text-center"
+                      >
+                        No Leave Requests Found
+                      </td>
+
+                    </tr>
+
+                  )}
+
+                </tbody>
+
+              </table>
 
             </div>
 
           </div>
 
-          {/* MY LEAVES */}
+        </div>
 
-          <div className="col-md-4 mb-4">
+        {/* LEAVE BALANCES */}
 
-            <div className="card shadow border-0 h-100">
+        <div className="card shadow border-0">
 
-              <div className="card-body d-flex flex-column">
+          <div className="card-body">
 
-                <h2 className="mb-3">
-                  My Leaves
-                </h2>
+            <div className="d-flex justify-content-between align-items-center mb-4">
 
-                <p className="flex-grow-1">
+              <h3>
+                Leave Balances
+              </h3>
 
-                  View your leave history
-                  and status.
-
-                </p>
-
-                <button
-                  className="btn btn-success w-100"
-                  onClick={() =>
-                    navigate("/my-leaves")
-                  }
-                >
-                  View My Leaves
-                </button>
-
-              </div>
+              <button
+                className="btn btn-warning"
+                onClick={() =>
+                  navigate("/leave-balance")
+                }
+              >
+                Full Balance
+              </button>
 
             </div>
 
-          </div>
+            <div className="row">
 
-          {/* LEAVE BALANCE */}
+              {leaveBalances.length > 0 ? (
 
-          <div className="col-md-4 mb-4">
+                leaveBalances.map((leave,index) => {
 
-            <div className="card shadow border-0 h-100">
+                  const percentage =
 
-              <div className="card-body d-flex flex-column">
+                    leave.total_leaves > 0
 
-                <h2 className="mb-3">
-                  Leave Balance
-                </h2>
+                      ? (
+                          leave.remaining_leaves /
+                          leave.total_leaves
+                        ) * 100
 
-                <p className="flex-grow-1">
+                      : 0;
 
-                  View your remaining
-                  leave balances.
+                      const colors = [
+  "#28a745", // Green
+  "#007bff", // Blue
+  "#fd7e14", // Orange
+  "#dc3545", // Red
+  "#6f42c1", // Purple
+  "#20c997", // Teal
+];
+                  return (
 
-                </p>
+                    <div
+                      key={
+                        leave.leave_type_id
+                      }
+                      className="col-md-3 mb-4"
+                    >
 
-                <button
-                  className="btn btn-warning w-100"
-                  onClick={() =>
-                    navigate("/leave-balance")
-                  }
-                >
-                  View Leave Balance
-                </button>
+                      <div
+  className="card border-0 shadow h-100"
+  style={{
+    borderRadius: "20px",
+    transition: "all 0.3s ease"
+  }}
+>
 
-              </div>
+                        <div className="card-body text-center">
+
+                          <h5
+  className="mb-3 fw-bold"
+  style={{
+    color:
+      colors[index % colors.length]
+  }}
+>
+  {leave.leave_name}
+</h5>
+
+                          <div
+                            style={{
+                              width: "120px",
+                              height: "120px",
+                              margin: "0 auto"
+                            }}
+                          >
+
+  <CircularProgressbar
+  value={percentage}
+  text={`${leave.remaining_leaves}`}
+  styles={buildStyles({
+
+    pathColor:
+      colors[index % colors.length],
+
+    textColor:
+      colors[index % colors.length],
+
+    trailColor:
+      "#f1f3f5",
+
+    strokeLinecap:
+      "round",
+
+    textSize:
+      "18px"
+
+  })}
+/>
+
+                          </div>
+
+                          <div
+  className="mt-3 text-start"
+  style={{
+    fontSize: "16px"
+  }}
+>
+
+                            <p className="mb-1">
+
+                              <strong>
+                                Total:
+                              </strong>
+                              {" "}
+                              {leave.total_leaves}
+
+                            </p>
+
+                            <p className="mb-1">
+
+                              <strong>
+                                Used:
+                              </strong>
+                              {" "}
+                              {leave.used_leaves}
+
+                            </p>
+
+                            <p className="mb-0">
+
+                              <strong>
+                                Remaining:
+                              </strong>
+                              {" "}
+                              {leave.remaining_leaves}
+
+                            </p>
+
+                          </div>
+
+                        </div>
+
+                      </div>
+
+                    </div>
+
+                  );
+
+                })
+
+              ) : (
+
+                <div className="col-12 text-center">
+
+                  No Leave Balances Found
+
+                </div>
+
+              )}
 
             </div>
 

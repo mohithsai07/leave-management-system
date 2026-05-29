@@ -419,18 +419,20 @@ function AdminDashboard() {
 
           {/* ADD LEAVE TYPE */}
 
-          <div className="col-md-3 mb-3">
+          {/* MANAGE ROLES */}
 
-            <button
-              className="btn btn-dark w-100 p-3"
-              onClick={() =>
-                navigate("/leave-types")
-              }
-            >
-              Add Leave Type
-            </button>
+<div className="col-md-3 mb-3">
 
-          </div>
+  <button
+    className="btn btn-dark w-100 p-3"
+    onClick={() =>
+      navigate("/roles")
+    }
+  >
+    Manage Roles
+  </button>
+
+</div>
 
         </div>
 

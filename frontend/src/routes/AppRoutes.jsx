@@ -58,6 +58,8 @@ from "../pages/admin/AllLeaves";
 import EmployeeDetails
 from "../pages/admin/EmployeeDetails";
 
+import Roles from "../pages/admin/Roles";
+
 // =========================================
 // PROTECTED ROUTE
 // =========================================
@@ -219,6 +221,15 @@ function AppRoutes() {
             </ProtectedRoute>
           }
         />
+
+        <Route
+  path="/roles"
+  element={
+    <ProtectedRoute role="Admin">
+      <Roles />
+    </ProtectedRoute>
+  }
+/>
 
       </Routes>
 
