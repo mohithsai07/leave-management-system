@@ -192,7 +192,8 @@ BEGIN
 
         UPDATE employee_leave_balances
         SET
-
+            -- total days -> new request(no.of days employee applied for leave)
+            -- used leaves -> days employee used already  
             used_leaves =
                 used_leaves + @total_days,
 

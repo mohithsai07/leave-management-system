@@ -310,6 +310,24 @@ namespace LeaveManagementAPI.Controllers
                 });
             }
 
+
+            // =====================================
+            // PASSWORD VALIDATION
+            // =====================================
+
+            // PASSWORD VALIDATION FOR NEW EMPLOYEE
+
+            if (
+                model.EmployeeId == null &&
+                string.IsNullOrWhiteSpace(model.PasswordHash)
+            )
+            {
+                return BadRequest(new
+                {
+                    message = "Password is required for new employees."
+                });
+            }
+
             SqlConnection con = new SqlConnection(
                 _configuration.GetConnectionString("DefaultConnection")
             );
