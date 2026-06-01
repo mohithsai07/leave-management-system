@@ -319,7 +319,11 @@ function EmployeeDetails() {
 
                   <br />
 
-                  {employee.manager_name || "-"}
+                  {
+  typeof employee.manager_name === "string"
+    ? employee.manager_name
+    : "-"
+}
 
                 </div>
 
