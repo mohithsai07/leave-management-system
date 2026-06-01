@@ -1,9 +1,6 @@
---EMPLOYEE LOGIN
-
-CREATE OR ALTER  PROCEDURE sp_login_employee
+CREATE OR ALTER PROCEDURE sp_login_employee
 (
-    @email VARCHAR(150),
-    @password_hash VARCHAR(100)
+    @email VARCHAR(150)
 )
 AS
 BEGIN
@@ -13,7 +10,7 @@ BEGIN
     BEGIN TRY
 
         -- =====================================
-        -- VALIDATE INPUTS
+        -- VALIDATE EMAIL
         -- =====================================
 
         IF (@email IS NULL OR LTRIM(RTRIM(@email)) = '')
@@ -22,16 +19,8 @@ BEGIN
             RETURN;
         END
 
-        IF (@password_hash IS NULL OR LTRIM(RTRIM(@password_hash)) = '')
-        BEGIN
-            RAISERROR('Password is required.', 16, 1);
-            RETURN;
-        END
-
-
         -- =====================================
-        -- VALIDATE EMPLOYEE LOGIN
-        --SELECT 1 -> to check existence.
+        -- VALIDATE EMPLOYEE
         -- =====================================
 
         IF NOT EXISTS
@@ -39,14 +28,16 @@ BEGIN
             SELECT 1
             FROM employees
             WHERE email = @email
-            AND password_hash = @password_hash
             AND status = 1
         )
         BEGIN
-            RAISERROR('Invalid email or password.', 16, 1);
+            RAISERROR(
+                'Invalid email.',
+                16,
+                1
+            );
             RETURN;
         END
-
 
         -- =====================================
         -- RETURN EMPLOYEE DETAILS
@@ -55,25 +46,16 @@ BEGIN
         SELECT
 
             e.employee_id,
-
             e.employee_code,
-
             e.first_name,
-
             e.last_name,
-
             e.email,
-
             e.department,
-
             e.role_id,
-
             r.role_name,
-
             e.manager_id,
-
+            e.password_hash,
             m.first_name + ' ' + m.last_name AS manager_name,
-
             e.created_at
 
         FROM employees e
@@ -81,13 +63,10 @@ BEGIN
         INNER JOIN roles r
             ON e.role_id = r.role_id
 
-        --Self Join
         LEFT JOIN employees m
             ON e.manager_id = m.employee_id
 
-        --Finally filter only the valid login user.
         WHERE e.email = @email
-        AND e.password_hash = @password_hash
         AND e.status = 1;
 
     END TRY

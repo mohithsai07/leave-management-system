@@ -4,6 +4,7 @@ using Microsoft.Data.SqlClient;
 using System.Data;
 using System.Text.RegularExpressions;
 using LeaveManagementAPI.Models;
+using BCrypt.Net;
 
 namespace LeaveManagementAPI.Controllers
 {
@@ -290,6 +291,7 @@ namespace LeaveManagementAPI.Controllers
             // EMAIL VALIDATION
             // =====================================
 
+<<<<<<< HEAD
             if (!Regex.IsMatch(
                 model.Email,
                 @"^[a-zA-Z0-9._%+-]+@company\.com$"
@@ -298,6 +300,42 @@ namespace LeaveManagementAPI.Controllers
                 return BadRequest(new
                 {
                     message = "Only company email allowed."
+=======
+
+            if (
+                string.IsNullOrWhiteSpace(
+                    model.Email
+                )
+                ||
+                !Regex.IsMatch(
+                    model.Email,
+                    @"^[a-zA-Z0-9._%+-]+@company\.com$"
+                )
+            )
+            {
+                return BadRequest(new
+                {
+                    message =
+                        "Only company email allowed."
+                });
+            }
+
+
+            // =====================================
+            // PASSWORD VALIDATION
+            // =====================================
+
+            // PASSWORD VALIDATION FOR NEW EMPLOYEE
+
+            if (
+                model.EmployeeId == null &&
+                string.IsNullOrWhiteSpace(model.PasswordHash)
+            )
+            {
+                return BadRequest(new
+                {
+                    message = "Password is required for new employees."
+>>>>>>> f2025b27bf2e41b5cd1b2ce232e2fe0cd3318a67
                 });
             }
 
@@ -332,9 +370,28 @@ namespace LeaveManagementAPI.Controllers
                 model.Email
             );
 
+            string passwordToStore =
+          model.PasswordHash ?? "";
+
+            if (
+                !string.IsNullOrWhiteSpace(
+                    passwordToStore
+                )
+                &&
+                !passwordToStore.StartsWith(
+                    "$2"
+                )
+            )
+            {
+                passwordToStore =
+                    BCrypt.Net.BCrypt.HashPassword(
+                        passwordToStore
+                    );
+            }
+
             cmd.Parameters.AddWithValue(
                 "@password_hash",
-                model.PasswordHash
+                passwordToStore
             );
 
             cmd.Parameters.AddWithValue(
@@ -500,7 +557,10 @@ namespace LeaveManagementAPI.Controllers
             return Ok(balances);
         }
 
+<<<<<<< HEAD
 >>>>>>> 7375aa3445535ca52a757167815ec17deb5be14e
+=======
+>>>>>>> f2025b27bf2e41b5cd1b2ce232e2fe0cd3318a67
         // =========================================
         // UPSERT LEAVE TYPE
         // =========================================

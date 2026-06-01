@@ -7,6 +7,7 @@ using System.Security.Claims;
 using System.Text;
 using System.Text.RegularExpressions;
 using LeaveManagementAPI.Models;
+using BCrypt.Net;
 
 namespace LeaveManagementAPI.Controllers
 {
@@ -60,11 +61,14 @@ namespace LeaveManagementAPI.Controllers
                     model.Email ?? ""
                 );
 
+<<<<<<< HEAD
                 cmd.Parameters.AddWithValue(
                     "@password_hash",
                     model.PasswordHash ?? ""
                 );
 
+=======
+>>>>>>> f2025b27bf2e41b5cd1b2ce232e2fe0cd3318a67
                 con.Open();
 
                 SqlDataReader reader =
@@ -82,6 +86,34 @@ namespace LeaveManagementAPI.Controllers
                 }
 
                 // =====================================
+<<<<<<< HEAD
+=======
+                // VERIFY PASSWORD USING BCRYPT
+                // =====================================
+
+                string storedHash =
+     reader["password_hash"]
+     ?.ToString()
+     ?? "";
+
+                bool isValidPassword =
+                    BCrypt.Net.BCrypt.Verify(
+                        model.PasswordHash ?? "",
+                        storedHash
+                    );
+
+                if (!isValidPassword)
+                {
+                    con.Close();
+
+                    return Unauthorized(new
+                    {
+                        message =
+                            "Invalid email or password."
+                    });
+                }
+                // =====================================
+>>>>>>> f2025b27bf2e41b5cd1b2ce232e2fe0cd3318a67
                 // FETCH EMPLOYEE DETAILS
                 // =====================================
 
@@ -181,9 +213,18 @@ namespace LeaveManagementAPI.Controllers
 
             catch (Exception ex)
             {
+<<<<<<< HEAD
                 return StatusCode(500, new
                 {
                     message = ex.Message
+=======
+                Console.WriteLine(ex.ToString());
+
+                return StatusCode(500, new
+                {
+                    message = ex.Message,
+                    stack = ex.StackTrace
+>>>>>>> f2025b27bf2e41b5cd1b2ce232e2fe0cd3318a67
                 });
             }
         }

@@ -214,6 +214,26 @@ BEGIN
 
             END
 
+            -- =====================================
+-- PASSWORD VALIDATION
+-- =====================================
+
+IF @password_hash IS NULL
+   OR LTRIM(RTRIM(@password_hash)) = ''
+BEGIN
+
+    RAISERROR(
+        'Password is required for new employees.',
+        16,
+        1
+    );
+
+    ROLLBACK TRANSACTION;
+
+    RETURN;
+
+END
+
 
             -- =================================
             -- INSERT EMPLOYEE
@@ -319,27 +339,32 @@ BEGIN
             -- =================================
 
             UPDATE employees
-            SET
+SET
+    first_name = @first_name,
 
-                first_name = @first_name,
+    last_name = @last_name,
 
-                last_name = @last_name,
+    email = @email,
 
-                email = @email,
+    password_hash =
+        CASE
+            WHEN @password_hash IS NULL
+                 OR LTRIM(RTRIM(@password_hash)) = ''
+            THEN password_hash
+            ELSE @password_hash
+        END,
 
-                password_hash = @password_hash,
+    role_id = @role_id,
 
-                role_id = @role_id,
+    manager_id = @manager_id,
 
-                manager_id = @manager_id,
+    department = @department,
 
-                department = @department,
+    status = @status,
 
-                status = @status,
+    updated_at = GETDATE()
 
-                updated_at = GETDATE()
-
-            WHERE employee_id = @employee_id;
+WHERE employee_id = @employee_id;
 
         END
 

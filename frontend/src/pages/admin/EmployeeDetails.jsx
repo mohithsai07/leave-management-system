@@ -320,6 +320,7 @@ function EmployeeDetails() {
                   <br />
 
                   {
+<<<<<<< HEAD
 
   typeof employee.manager_name === "string"
 
@@ -329,6 +330,12 @@ function EmployeeDetails() {
 
 }
  
+=======
+  typeof employee.manager_name === "string"
+    ? employee.manager_name
+    : "-"
+}
+>>>>>>> f2025b27bf2e41b5cd1b2ce232e2fe0cd3318a67
 
                 </div>
 
