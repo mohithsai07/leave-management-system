@@ -4,6 +4,7 @@ using Microsoft.Data.SqlClient;
 using System.Data;
 using System.Text.RegularExpressions;
 using LeaveManagementAPI.Models;
+using BCrypt.Net;
 
 namespace LeaveManagementAPI.Controllers
 {
@@ -290,14 +291,22 @@ namespace LeaveManagementAPI.Controllers
             // EMAIL VALIDATION
             // =====================================
 
-            if (!Regex.IsMatch(
-                model.Email,
-                @"^[a-zA-Z0-9._%+-]+@company\.com$"
-            ))
+
+            if (
+                string.IsNullOrWhiteSpace(
+                    model.Email
+                )
+                ||
+                !Regex.IsMatch(
+                    model.Email,
+                    @"^[a-zA-Z0-9._%+-]+@company\.com$"
+                )
+            )
             {
                 return BadRequest(new
                 {
-                    message = "Only company email allowed."
+                    message =
+                        "Only company email allowed."
                 });
             }
 
@@ -332,9 +341,28 @@ namespace LeaveManagementAPI.Controllers
                 model.Email
             );
 
+            string passwordToStore =
+          model.PasswordHash ?? "";
+
+            if (
+                !string.IsNullOrWhiteSpace(
+                    passwordToStore
+                )
+                &&
+                !passwordToStore.StartsWith(
+                    "$2"
+                )
+            )
+            {
+                passwordToStore =
+                    BCrypt.Net.BCrypt.HashPassword(
+                        passwordToStore
+                    );
+            }
+
             cmd.Parameters.AddWithValue(
                 "@password_hash",
-                model.PasswordHash
+                passwordToStore
             );
 
             cmd.Parameters.AddWithValue(
