@@ -51,9 +51,9 @@ function EmployeeDetails() {
 
       try {
 
-        const balanceResponse = await api.get(
-          `/employee/leave-balance/${id}`
-        );
+      const balanceResponse = await api.get(
+  `/admin/employee/${id}/leave-balance`
+);
 
         setLeaveBalances(
           balanceResponse.data

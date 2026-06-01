@@ -377,6 +377,130 @@ namespace LeaveManagementAPI.Controllers
             return Ok(response);
         }
 
+<<<<<<< HEAD
+=======
+
+        [HttpPost("upsert-role")]
+        public IActionResult UpsertRole(
+    [FromBody] RoleModel role
+)
+        {
+            try
+            {
+                using SqlConnection conn =
+                    new SqlConnection(
+                        _configuration.GetConnectionString(
+                            "DefaultConnection"
+                        )
+                    );
+
+                using SqlCommand cmd =
+                    new SqlCommand(
+                        "sp_upsert_role",
+                        conn
+                    );
+
+                cmd.CommandType =
+                    CommandType.StoredProcedure;
+
+                cmd.Parameters.AddWithValue(
+                    "@role_id",
+                    role.RoleId == 0
+                        ? DBNull.Value
+                        : role.RoleId
+                );
+
+                cmd.Parameters.AddWithValue(
+                    "@role_name",
+                    role.RoleName
+                );
+
+                conn.Open();
+
+                cmd.ExecuteNonQuery();
+
+                return Ok(
+                    new
+                    {
+                        message =
+                            "Role saved successfully"
+                    }
+                );
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(
+                    ex.Message
+                );
+            }
+        }
+
+
+        [HttpGet("employee/{id}/leave-balance")]
+        public IActionResult GetEmployeeLeaveBalance(int id)
+        {
+            List<object> balances = new();
+
+            SqlConnection con = new SqlConnection(
+                _configuration.GetConnectionString(
+                    "DefaultConnection"
+                )
+            );
+
+            SqlCommand cmd = new SqlCommand(
+                "sp_get_leave_dashboard",
+                con
+            );
+
+            cmd.CommandType =
+                CommandType.StoredProcedure;
+
+            cmd.Parameters.AddWithValue(
+                "@employee_id",
+                id
+            );
+
+            con.Open();
+
+            SqlDataReader reader =
+                cmd.ExecuteReader();
+
+            while (reader.Read())
+            {
+                balances.Add(new
+                {
+                    leave_type_id =
+                        reader["leave_type_id"],
+
+                    leave_name =
+                        reader["leave_name"],
+
+                    total_leaves =
+                        reader["total_leaves"],
+
+                    used_leaves =
+                        reader["used_leaves"],
+
+                    remaining_leaves =
+                        reader["remaining_leaves"],
+
+                    note =
+                        reader["note"],
+
+                    year =
+                        reader["year"],
+
+                    updated_at =
+                        reader["updated_at"]
+                });
+            }
+
+            con.Close();
+
+            return Ok(balances);
+        }
+
+>>>>>>> 7375aa3445535ca52a757167815ec17deb5be14e
         // =========================================
         // UPSERT LEAVE TYPE
         // =========================================
