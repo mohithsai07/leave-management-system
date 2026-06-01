@@ -1,12 +1,16 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 using System.Data;
+using System.Text.RegularExpressions;
 using LeaveManagementAPI.Models;
+using BCrypt.Net;
 
 namespace LeaveManagementAPI.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize(Roles = "Admin")]
     public class AdminController : ControllerBase
     {
         private readonly IConfiguration _configuration;
@@ -15,7 +19,6 @@ namespace LeaveManagementAPI.Controllers
         {
             _configuration = configuration;
         }
-
 
         // =========================================
         // GET ALL EMPLOYEES
@@ -66,7 +69,6 @@ namespace LeaveManagementAPI.Controllers
 
             return Ok(employees);
         }
-
 
         // =========================================
         // GET SINGLE EMPLOYEE
@@ -123,7 +125,6 @@ namespace LeaveManagementAPI.Controllers
             return Ok(employees);
         }
 
-
         // =========================================
         // GET LEAVE TYPES
         // =========================================
@@ -166,7 +167,6 @@ namespace LeaveManagementAPI.Controllers
             return Ok(leaveTypes);
         }
 
-
         // =========================================
         // GET ROLES
         // =========================================
@@ -206,13 +206,14 @@ namespace LeaveManagementAPI.Controllers
             return Ok(roles);
         }
 
-
         // =========================================
         // GET ALL LEAVE REQUESTS
         // =========================================
 
         [HttpGet("all-leaves")]
-        public IActionResult GetAllLeaves()
+        public IActionResult GetAllLeaves(
+            [FromQuery] int? employeeId
+        )
         {
             List<object> leaves = new List<object>();
 
@@ -227,6 +228,11 @@ namespace LeaveManagementAPI.Controllers
 
             cmd.CommandType = CommandType.StoredProcedure;
 
+            cmd.Parameters.AddWithValue(
+                "@employee_id",
+                (object?)employeeId ?? DBNull.Value
+            );
+
             con.Open();
 
             SqlDataReader reader = cmd.ExecuteReader();
@@ -236,19 +242,33 @@ namespace LeaveManagementAPI.Controllers
                 leaves.Add(new
                 {
                     leave_request_id = reader["leave_request_id"],
+
                     employee_id = reader["employee_id"],
+
                     employee_code = reader["employee_code"],
+
                     employee_name = reader["employee_name"],
+
                     department = reader["department"],
+
                     leave_name = reader["leave_name"],
+
                     from_date = reader["from_date"],
+
                     to_date = reader["to_date"],
+
                     total_days = reader["total_days"],
+
                     reason = reader["reason"],
+
                     status = reader["status"],
+
                     applied_at = reader["applied_at"],
+
                     manager_comments = reader["manager_comments"],
+
                     approved_at = reader["approved_at"],
+
                     approved_by_name = reader["approved_by_name"]
                 });
             }
@@ -258,14 +278,38 @@ namespace LeaveManagementAPI.Controllers
             return Ok(leaves);
         }
 
-
         // =========================================
         // UPSERT EMPLOYEE
         // =========================================
 
         [HttpPost("upsert-employee")]
-        public IActionResult UpsertEmployee(EmployeeModel model)
+        public IActionResult UpsertEmployee(
+    [FromBody] EmployeeModel model
+)
         {
+            // =====================================
+            // EMAIL VALIDATION
+            // =====================================
+
+
+            if (
+                string.IsNullOrWhiteSpace(
+                    model.Email
+                )
+                ||
+                !Regex.IsMatch(
+                    model.Email,
+                    @"^[a-zA-Z0-9._%+-]+@company\.com$"
+                )
+            )
+            {
+                return BadRequest(new
+                {
+                    message =
+                        "Only company email allowed."
+                });
+            }
+
             SqlConnection con = new SqlConnection(
                 _configuration.GetConnectionString("DefaultConnection")
             );
@@ -283,11 +327,6 @@ namespace LeaveManagementAPI.Controllers
             );
 
             cmd.Parameters.AddWithValue(
-                "@employee_code",
-                model.EmployeeCode
-            );
-
-            cmd.Parameters.AddWithValue(
                 "@first_name",
                 model.FirstName
             );
@@ -302,9 +341,28 @@ namespace LeaveManagementAPI.Controllers
                 model.Email
             );
 
+            string passwordToStore =
+          model.PasswordHash ?? "";
+
+            if (
+                !string.IsNullOrWhiteSpace(
+                    passwordToStore
+                )
+                &&
+                !passwordToStore.StartsWith(
+                    "$2"
+                )
+            )
+            {
+                passwordToStore =
+                    BCrypt.Net.BCrypt.HashPassword(
+                        passwordToStore
+                    );
+            }
+
             cmd.Parameters.AddWithValue(
                 "@password_hash",
-                model.PasswordHash
+                passwordToStore
             );
 
             cmd.Parameters.AddWithValue(
@@ -337,7 +395,8 @@ namespace LeaveManagementAPI.Controllers
             {
                 response.Add(new
                 {
-                    message = reader["message"]
+                    message = reader["message"],
+                    employee_code = reader["employee_code"]
                 });
             }
 
@@ -347,12 +406,134 @@ namespace LeaveManagementAPI.Controllers
         }
 
 
+        [HttpPost("upsert-role")]
+        public IActionResult UpsertRole(
+    [FromBody] RoleModel role
+)
+        {
+            try
+            {
+                using SqlConnection conn =
+                    new SqlConnection(
+                        _configuration.GetConnectionString(
+                            "DefaultConnection"
+                        )
+                    );
+
+                using SqlCommand cmd =
+                    new SqlCommand(
+                        "sp_upsert_role",
+                        conn
+                    );
+
+                cmd.CommandType =
+                    CommandType.StoredProcedure;
+
+                cmd.Parameters.AddWithValue(
+                    "@role_id",
+                    role.RoleId == 0
+                        ? DBNull.Value
+                        : role.RoleId
+                );
+
+                cmd.Parameters.AddWithValue(
+                    "@role_name",
+                    role.RoleName
+                );
+
+                conn.Open();
+
+                cmd.ExecuteNonQuery();
+
+                return Ok(
+                    new
+                    {
+                        message =
+                            "Role saved successfully"
+                    }
+                );
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(
+                    ex.Message
+                );
+            }
+        }
+
+
+        [HttpGet("employee/{id}/leave-balance")]
+        public IActionResult GetEmployeeLeaveBalance(int id)
+        {
+            List<object> balances = new();
+
+            SqlConnection con = new SqlConnection(
+                _configuration.GetConnectionString(
+                    "DefaultConnection"
+                )
+            );
+
+            SqlCommand cmd = new SqlCommand(
+                "sp_get_leave_dashboard",
+                con
+            );
+
+            cmd.CommandType =
+                CommandType.StoredProcedure;
+
+            cmd.Parameters.AddWithValue(
+                "@employee_id",
+                id
+            );
+
+            con.Open();
+
+            SqlDataReader reader =
+                cmd.ExecuteReader();
+
+            while (reader.Read())
+            {
+                balances.Add(new
+                {
+                    leave_type_id =
+                        reader["leave_type_id"],
+
+                    leave_name =
+                        reader["leave_name"],
+
+                    total_leaves =
+                        reader["total_leaves"],
+
+                    used_leaves =
+                        reader["used_leaves"],
+
+                    remaining_leaves =
+                        reader["remaining_leaves"],
+
+                    note =
+                        reader["note"],
+
+                    year =
+                        reader["year"],
+
+                    updated_at =
+                        reader["updated_at"]
+                });
+            }
+
+            con.Close();
+
+            return Ok(balances);
+        }
+
         // =========================================
         // UPSERT LEAVE TYPE
         // =========================================
 
         [HttpPost("upsert-leave-type")]
-        public IActionResult UpsertLeaveType(LeaveTypeModel model)
+        public IActionResult UpsertLeaveType(
+    [FromBody] LeaveTypeModel model
+)
         {
             SqlConnection con = new SqlConnection(
                 _configuration.GetConnectionString("DefaultConnection")
