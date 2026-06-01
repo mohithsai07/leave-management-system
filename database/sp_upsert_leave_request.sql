@@ -90,6 +90,8 @@ BEGIN
         -- CALCULATE TOTAL DAYS
         -- =====================================
 
+
+        --12 - 10 + 1
         SET @total_days =
         DATEDIFF(
             DAY,
@@ -149,40 +151,78 @@ BEGIN
 
 
         -- =====================================
-        -- VALIDATE LEAVE BALANCE
-        -- =====================================
+-- VALIDATE LEAVE BALANCE
+-- =====================================
 
-        IF (@remaining_leaves IS NULL)
-        BEGIN
+DECLARE @pending_days INT = 0;
+DECLARE @available_leaves INT = 0;
 
-            RAISERROR(
-                'Leave balance not assigned.',
-                16,
-                1
-            );
+IF (@remaining_leaves IS NULL)
+BEGIN
 
-            ROLLBACK TRANSACTION;
+    RAISERROR(
+        'Leave balance not assigned.',
+        16,
+        1
+    );
 
-            RETURN;
+    ROLLBACK TRANSACTION;
 
-        END
+    RETURN;
+
+END
 
 
-        IF (@remaining_leaves < @total_days)
-        BEGIN
+-- =====================================
+-- CALCULATE PENDING DAYS
+-- =====================================
 
-            RAISERROR(
-                'Exceeding number of leaves.',
-                16,
-                1
-            );
+SELECT
+    @pending_days =
+    ISNULL(
+        SUM(total_days),
+        0
+    )
+FROM leave_requests
+WHERE employee_id = @employee_id
+AND leave_type_id = @leave_type_id
+AND status = 'Pending'
+AND
+(
+    @leave_request_id IS NULL
+    OR leave_request_id <> @leave_request_id
+);
 
-            ROLLBACK TRANSACTION;
 
-            RETURN;
+-- =====================================
+-- AVAILABLE LEAVES
+-- =====================================
 
-        END
+SET @available_leaves =
+(
+    @remaining_leaves - @pending_days
+);
 
+
+-- =====================================
+-- VALIDATE AGAINST
+-- REMAINING + PENDING
+-- =====================================
+
+IF (@available_leaves < @total_days)
+BEGIN
+
+    RAISERROR(
+        'Insufficient leave balance. Existing pending leave requests are already consuming available leave balance.',
+        16,
+        1
+    );
+
+    ROLLBACK TRANSACTION;
+
+    RETURN;
+
+END
 
         -- =====================================
         -- INSERT MODE
